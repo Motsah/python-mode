@@ -40,6 +40,8 @@ call pymode#default("g:pymode_folding", 1)
 call pymode#default("g:pymode_folding_nest_limit", 1000)
 " Change for folding customization (by example enable fold for 'if', 'for')
 call pymode#default("g:pymode_folding_regex", '^\s*\%(class\|def\) \w\+')
+" Enable/Disable pymode section folding for pyfiles.
+call pymode#default("g:pymode_folding_bracket", 1)
 
 " Enable/disable python motion operators
 call pymode#default("g:pymode_motion", 1)

@@ -7,6 +7,8 @@ let s:decorator_regex = '^\s*@'
 let s:doc_begin_regex = '^\s*\%("""\|''''''\)'
 let s:doc_end_regex = '\%("""\|''''''\)\s*$'
 let s:doc_line_regex = '^\s*\("""\|''''''\).\+\1\s*$'
+let s:bracket_begin_regex = '^.*\%((\|[\|{\)$'
+let s:bracket_end_regex = '^\s*\%()\|]\|}\)'
 let s:symbol = matchstr(&fillchars, 'fold:\zs.')  " handles multibyte characters
 if s:symbol == ''
     let s:symbol = ' '
@@ -14,8 +16,15 @@ endif
 
 
 fun! pymode#folding#text() " {{{
+    if g:pymode_folding_bracket
+        let bracket_begin = s:bracket_begin_regex
+    else
+        " Matches nothing => no impact during the while
+        let bracket_begin = '\(\)\@!'
+    endif
+
     let fs = v:foldstart
-    while getline(fs) !~ s:def_regex && getline(fs) !~ s:doc_begin_regex
+    while getline(fs) !~ s:def_regex && getline(fs) !~ s:doc_begin_regex && getline(fs) !~ bracket_begin
         let fs = nextnonblank(fs + 1)
     endwhile
     if getline(fs) =~ s:doc_end_regex && getline(fs) =~ s:doc_begin_regex
@@ -79,6 +88,16 @@ fun! pymode#folding#expr(lnum) "{{{
 
     if line =~ s:doc_end_regex && line !~ s:doc_line_regex
         return "<".(indent / &shiftwidth + 1)
+    endif
+
+    if g:pymode_folding_bracket
+        if line =~ s:bracket_begin_regex
+            return ">".(indent / &shiftwidth + 1)
+        endif
+
+        if line =~ s:bracket_end_regex
+            return "<".(indent / &shiftwidth + 1)
+        endif
     endif
 
     " Handle nested defs but only for files shorter than
