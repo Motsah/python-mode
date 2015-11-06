@@ -1,0 +1,74 @@
+From f7ed41aaa4daf21dda7dcc04aaf428c97190087a Mon Sep 17 00:00:00 2001
+From: Thomas Faivre <thomas.faivre@6wind.com>
+Date: Fri, 6 Nov 2015 14:27:29 +0100
+Subject: [PATCH] Add folding for braces/brackets/parenthesis
+
+Signed-off-by: Thomas Faivre <thomas.faivre@6wind.com>
+---
+ autoload/pymode/folding.vim | 21 ++++++++++++++++++++-
+ plugin/pymode.vim           |  2 ++
+ 2 files changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/autoload/pymode/folding.vim b/autoload/pymode/folding.vim
+index 3ed61bc..e9ae3c4 100644
+--- a/autoload/pymode/folding.vim
++++ b/autoload/pymode/folding.vim
+@@ -7,6 +7,8 @@ let s:decorator_regex = '^\s*@'
+ let s:doc_begin_regex = '^\s*\%("""\|''''''\)'
+ let s:doc_end_regex = '\%("""\|''''''\)\s*$'
+ let s:doc_line_regex = '^\s*\("""\|''''''\).\+\1\s*$'
++let s:bracket_begin_regex = '^.*\%((\|[\|{\)$'
++let s:bracket_end_regex = '^\s*\%()\|]\|}\)'
+ let s:symbol = matchstr(&fillchars, 'fold:\zs.')  " handles multibyte characters
+ if s:symbol == ''
+     let s:symbol = ' '
+@@ -14,8 +16,15 @@ endif
+ 
+ 
+ fun! pymode#folding#text() " {{{
++    if g:pymode_folding_bracket
++        let bracket_begin = s:bracket_begin_regex
++    else
++        " Matches nothing => no impact during the while
++        let bracket_begin = '\(\)\@!'
++    endif
++
+     let fs = v:foldstart
+-    while getline(fs) !~ s:def_regex && getline(fs) !~ s:doc_begin_regex
++    while getline(fs) !~ s:def_regex && getline(fs) !~ s:doc_begin_regex && getline(fs) !~ bracket_begin
+         let fs = nextnonblank(fs + 1)
+     endwhile
+     if getline(fs) =~ s:doc_end_regex && getline(fs) =~ s:doc_begin_regex
+@@ -81,6 +90,16 @@ fun! pymode#folding#expr(lnum) "{{{
+         return "<".(indent / &shiftwidth + 1)
+     endif
+ 
++    if g:pymode_folding_bracket
++        if line =~ s:bracket_begin_regex
++            return ">".(indent / &shiftwidth + 1)
++        endif
++
++        if line =~ s:bracket_end_regex
++            return "<".(indent / &shiftwidth + 1)
++        endif
++    endif
++
+     " Handle nested defs but only for files shorter than
+     " g:pymode_folding_nest_limit lines due to performance concerns
+     if line('$') < g:pymode_folding_nest_limit && indent(prevnonblank(a:lnum))
+diff --git a/plugin/pymode.vim b/plugin/pymode.vim
+index 26541ae..36afab8 100644
+--- a/plugin/pymode.vim
++++ b/plugin/pymode.vim
+@@ -40,6 +40,8 @@ call pymode#default("g:pymode_folding", 1)
+ call pymode#default("g:pymode_folding_nest_limit", 1000)
+ " Change for folding customization (by example enable fold for 'if', 'for')
+ call pymode#default("g:pymode_folding_regex", '^\s*\%(class\|def\) \w\+')
++" Enable/Disable pymode section folding for pyfiles.
++call pymode#default("g:pymode_folding_bracket", 1)
+ 
+ " Enable/disable python motion operators
+ call pymode#default("g:pymode_motion", 1)
+-- 
+2.1.4
+

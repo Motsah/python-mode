@@ -7,9 +7,8 @@ let s:decorator_regex = '^\s*@'
 let s:doc_begin_regex = '^\s*\%("""\|''''''\)'
 let s:doc_end_regex = '\%("""\|''''''\)\s*$'
 let s:doc_line_regex = '^\s*\("""\|''''''\).\+\1\s*$'
-let s:bracket_begin_regex = '^.*\%((\|[\|{\)$'
-let s:bracket_end_regex = '^.*\%()\|]\|}\)\%(\|,\)$'
-let s:bracket_line_regex = '^.*\%()\|]\|}\)\%(\|,\)$'
+let s:bracket_begin_regex = '^.\{-}\%((\|[\|{\)'
+let s:bracket_end_regex = '^.*\%()\|]\|}\)\s*\%(\|,\)\s*$'
 let s:symbol = matchstr(&fillchars, 'fold:\zs.')  " handles multibyte characters
 if s:symbol == ''
     let s:symbol = ' '
@@ -97,12 +96,38 @@ fun! pymode#folding#expr(lnum) "{{{
     endif
 
     if g:pymode_folding_bracket
-        if line =~ s:bracket_begin_regex && line !~ s:bracket_end_regex
-            return ">".(indent / &shiftwidth + 1)
+        if line =~ s:bracket_begin_regex
+            let curpos = getpos('.')
+            try
+                call cursor(0, 1)
+                call search('\%((\|[\|{\)', 'c')
+                if searchpair('\%((\|\[\|{\)', '', '\%()\|\]\|}\)', 'n', '', a:lnum) == a:lnum
+                    return '='
+                else
+                    echom 'fs='.a:lnum
+                    return ">".(indent / &shiftwidth + 1)
+                endif
+            finally
+                call setpos('.', curpos)
+            endtry
         endif
 
-        if line =~ s:bracket_end_regex && line !~ s:bracket_begin_regex
-            return "<".(indent / &shiftwidth + 1)
+        if line =~ s:bracket_end_regex
+            let curpos = getpos('.')
+            try
+                normal $
+                call search('\%()\|]\|}\)', 'bc')
+                if searchpair('\%((\|\[\|{\)', '', '\%()\|\]\|}\)', 'bn', '', a:lnum) == a:lnum
+                    return '='
+                else
+                    let fs = searchpair('\%((\|\[\|{\)', '', '\%()\|\]\|}\)', 'bn')
+                    echom 'fs='.fs.' fe='.a:lnum
+                    let fs_indent = foldlevel(fs)
+                    return fs_indent
+                endif
+            finally
+                call setpos('.', curpos)
+            endtry
         endif
     endif
 
