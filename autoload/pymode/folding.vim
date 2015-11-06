@@ -8,7 +8,8 @@ let s:doc_begin_regex = '^\s*\%("""\|''''''\)'
 let s:doc_end_regex = '\%("""\|''''''\)\s*$'
 let s:doc_line_regex = '^\s*\("""\|''''''\).\+\1\s*$'
 let s:bracket_begin_regex = '^.*\%((\|[\|{\)$'
-let s:bracket_end_regex = '^\s*\%()\|]\|}\)'
+let s:bracket_end_regex = '^.*\%()\|]\|}\)\%(\|,\)$'
+let s:bracket_line_regex = '^.*\%()\|]\|}\)\%(\|,\)$'
 let s:symbol = matchstr(&fillchars, 'fold:\zs.')  " handles multibyte characters
 if s:symbol == ''
     let s:symbol = ' '
@@ -29,6 +30,11 @@ fun! pymode#folding#text() " {{{
     endwhile
     if getline(fs) =~ s:doc_end_regex && getline(fs) =~ s:doc_begin_regex
         let fs = nextnonblank(fs + 1)
+    endif
+    if g:pymode_folding_bracket
+        if getline(fs) =~ s:section_end_regex && getline(fs) =~ s:section_begin_regex
+            let fs = nextnonblank(fs + 1)
+        endif
     endif
     let line = getline(fs)
 
@@ -91,11 +97,11 @@ fun! pymode#folding#expr(lnum) "{{{
     endif
 
     if g:pymode_folding_bracket
-        if line =~ s:bracket_begin_regex
+        if line =~ s:bracket_begin_regex && line !~ s:bracket_end_regex
             return ">".(indent / &shiftwidth + 1)
         endif
 
-        if line =~ s:bracket_end_regex
+        if line =~ s:bracket_end_regex && line !~ s:bracket_begin_regex
             return "<".(indent / &shiftwidth + 1)
         endif
     endif
